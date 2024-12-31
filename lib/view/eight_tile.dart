@@ -13,6 +13,7 @@ import 'package:toggle_switch/toggle_switch.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:tes/widgets/sound_controller.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../component/puzzle_api.dart';
 
 AudioPlayer musicPlayer = AudioPlayer();
@@ -32,6 +33,10 @@ class EightTilePuzzle extends StatefulWidget {
 }
 
 class _EightTilePuzzleState extends State<EightTilePuzzle> {
+  bool aktifkanTombolSound = false;
+  bool isLoading = true;
+  bool isConnected = false;
+
   double _musicVolume = 0.5;
   double _narratorVolume = 0.5;
   double _gameVolume = 0.5;
@@ -49,20 +54,16 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
       GlobalKey<SoundControllerState>();
   final int gridSize = 3;
   List<int> tileOrder = [];
-  // late AudioPlayer _backgroundMusicPlayer;
-  // late AudioPlayer _soundEffectPlayer;
   bool _isOpeningSoundPlayed = false;
   bool showAnimatedContainer = false;
   double boxHeight = 860;
   double boxWidth = 860;
   double boxX = 0;
   double boxY = -1.06;
-  // late AudioPlayer _audioPlayer; // Declare the audio player
   bool _isMuted = true;
   List<String> imagePaths = [];
   Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
-  bool isLoading = true;
   bool isOn = false;
 
   @override
@@ -70,12 +71,46 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showStartDialog();
+      if (widget.naratorSound.toString() !=
+          'https://ebook.erlanggaonline.co.id/puzzledata/puzzlesound/') {
+        // print('ihsan yy' + widget.naratorSound.toString());
+        aktifkanTombolSound = true;
+      }
+      // print('ihsan yy' + widget.naratorSound.toString());
+
       if (!_isOpeningSoundPlayed) {
         _playOpeningSound();
         _isOpeningSoundPlayed = true;
       }
     });
     _loadVolumePreferences();
+    _checkInternetConnection();
+  }
+
+  Future<void> _checkInternetConnection() async {
+    if (!mounted) return;
+    setState(() {
+      isLoading = true;
+    });
+
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (!mounted) return;
+    setState(() {
+      isConnected = connectivityResult != ConnectivityResult.none;
+      isLoading = false;
+    });
+
+    if (isConnected) {
+      _reloadPage();
+    }
+  }
+
+  void _reloadPage() {
+    setState(() {
+      _loadVolumePreferences();
+      _checkInternetConnection();
+    });
+    print("Page reloaded!");
   }
 
   Future<void> _toggleSound(bool mute, int index, double volume) async {
@@ -88,9 +123,9 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
           });
         }
       } else {
-        if (widget.naratorSound != null) {
+        if (widget.naratorSound != '') {
           await narratorPlayer.setUrl(widget.naratorSound!);
-          print('ihsan xx ' + widget.naratorSound.toString());
+          // print('ihsan xx ' + widget.naratorSound.toString());
           await narratorPlayer.setVolume(volume);
           await narratorPlayer.play();
           if (mounted) {
@@ -119,6 +154,8 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
       narratorPlayer.setVolume(_narratorVolume);
       gamePlayer.setVolume(_gameVolume);
       openingPlayer.setVolume(_openingVolume);
+
+      // print('ihsan' + widget.naratorSound.toString());
     });
   }
 
@@ -237,170 +274,47 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
     fontWeight: FontWeight.bold,
   );
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   double tileSize = MediaQuery.of(context).size.width / gridSize;
-  //   String formattedTime = _formatDuration(_stopwatch.elapsed);
-
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       centerTitle: true,
-  //       title: const Text(
-  //         'EIGHT TILE PUZZLE',
-  //         style: TextStyle(
-  //           color: Colors.white,
-  //           fontFamily: "ComicSans", // Font lebih playful
-  //           fontSize: 22,
-  //           shadows: [
-  //             Shadow(
-  //               offset: Offset(2, 2),
-  //               blurRadius: 2,
-  //               color: Colors.black45,
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //       actions: [
-  //         IconButton(
-  //           icon: const Icon(Icons.volume_up, color: Colors.white),
-  //           onPressed: () {
-  //             Navigator.push(
-  //               context,
-  //               MaterialPageRoute(builder: (context) => SoundController()),
-  //             );
-  //           },
-  //         ),
-  //       ],
-  //       backgroundColor: Colors.purple,
-  //       elevation: 4,
-  //     ),
-  //     body: LatarBelakang(
-  //       child: Stack(
-  //         children: [
-  //           Column(
-  //             children: [
-  //               Expanded(
-  //                 child: GridView.builder(
-  //                   physics: NeverScrollableScrollPhysics(),
-  //                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-  //                     crossAxisCount: gridSize,
-  //                     crossAxisSpacing: 0.0,
-  //                     mainAxisSpacing: 0.0,
-  //                   ),
-  //                   itemCount: tileOrder.length,
-  //                   itemBuilder: (context, index) {
-  //                     int tileIndex = tileOrder[index];
-  //                     if (tileIndex == gridSize * gridSize - 1) {
-  //                       return GestureDetector(
-  //                         onTap: () {
-  //                           if (_isMovable(index)) {
-  //                             _swapTiles(index,
-  //                                 tileOrder.indexOf(gridSize * gridSize - 1));
-  //                             if (_isSolved()) {
-  //                               _showWinDialog();
-  //                             }
-  //                           }
-  //                         },
-  //                         child: Container(
-  //                           color: Colors.transparent,
-  //                           child: Container(),
-  //                         ),
-  //                       );
-  //                     } else {
-  //                       return GestureDetector(
-  //                         onTap: () {
-  //                           if (_isMovable(index)) {
-  //                             _swapTiles(index,
-  //                                 tileOrder.indexOf(gridSize * gridSize - 1));
-  //                             if (_isSolved()) {
-  //                               _showWinDialog();
-  //                             }
-  //                           }
-  //                         },
-  //                         child: Container(
-  //                           margin: EdgeInsets.all(4.0),
-  //                           decoration: BoxDecoration(
-  //                             boxShadow: [
-  //                               BoxShadow(
-  //                                 color: Colors.black.withOpacity(0.2),
-  //                                 spreadRadius: 2,
-  //                                 blurRadius: 3,
-  //                                 offset: Offset(0, 3),
-  //                               ),
-  //                             ],
-  //                           ),
-  //                           child: Image.file(
-  //                             File(imagePaths[tileIndex]),
-  //                             fit: BoxFit.cover,
-  //                             width: tileSize,
-  //                             height: tileSize,
-  //                           ),
-  //                         ),
-  //                       );
-  //                     }
-  //                   },
-  //                 ),
-  //               ),
-  //               Padding(
-  //                 padding: const EdgeInsets.all(8.0),
-  //                 child: Text(
-  //                   "Time: $formattedTime",
-  //                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //           AnimatedContainer(
-  //             duration: Duration(milliseconds: 200),
-  //             alignment: Alignment(boxX, boxY),
-  //             child: Container(
-  //               height: 400,
-  //               width: 420,
-  //               margin: EdgeInsets.only(bottom: 60),
-  //               child: Align(
-  //                 alignment: Alignment.bottomCenter,
-  //                 child: Padding(
-  //                   padding: const EdgeInsets.all(8.0),
-  //                   child: SizedBox(
-  //                     width: boxWidth,
-  //                     height: boxHeight,
-  //                     child: ClipRRect(
-  //                       borderRadius: BorderRadius.circular(8.0),
-  //                       child: Image.network(
-  //                         myurl,
-  //                         fit: BoxFit.cover,
-  //                         loadingBuilder: (context, child, loadingProgress) {
-  //                           if (loadingProgress == null) return child;
-  //                           return Center(
-  //                             child: CircularProgressIndicator(),
-  //                           );
-  //                         },
-  //                         errorBuilder: (context, error, stackTrace) {
-  //                           return Center(
-  //                             child: Text("Gambar gagal dimuat!"),
-  //                           );
-  //                         },
-  //                       ),
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ),
-  //             ),
-  //           ),
-  //           if (isLoading)
-  //             const Center(
-  //               child: CircularProgressIndicator(),
-  //             ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
+    final mediaQueryHeight = MediaQuery.of(context).size.height;
+    final mediaQueryWidth = MediaQuery.of(context).size.width;
     double tileSize = MediaQuery.of(context).size.width / gridSize;
     String formattedTime = _formatDuration(_stopwatch.elapsed);
+
+    final myAppBar = AppBar(
+      backgroundColor: Colors.purple,
+      centerTitle: true,
+      title: const Text(
+        'EIGHT TILE PUZZLE',
+        style: TextStyle(
+          color: Colors.white,
+          fontFamily: "ComicSans", // Font lebih playful
+          fontSize: 22,
+          shadows: [
+            Shadow(
+              offset: Offset(2, 2),
+              blurRadius: 2,
+              color: Colors.black45,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.volume_up, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SoundController()),
+            );
+          },
+        ),
+      ],
+    );
+
+    final bodyHeight = mediaQueryHeight -
+        myAppBar.preferredSize.height -
+        MediaQuery.of(context).padding.top;
 
     return WillPopScope(
         onWillPop: () async {
@@ -411,38 +325,7 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
           return false;
         },
         child: Scaffold(
-          appBar: AppBar(
-            backgroundColor: Colors.purple,   
-            centerTitle: true,
-            title: const Text(
-              'EIGHT TILE PUZZLE',
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: "ComicSans", // Font lebih playful
-                fontSize: 22,
-                shadows: [
-                  Shadow(
-                    offset: Offset(2, 2),
-                    blurRadius: 2,
-                    color: Colors.black45,
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.volume_up, color: Colors.white),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => SoundController()),
-                  );
-                },
-              ),
-            ],
-          ),
-          
-          // elevation: 4,
+          appBar: myAppBar,
           body: LatarBelakang(
             child: Stack(
               children: [
@@ -528,8 +411,8 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
                   duration: Duration(milliseconds: 200),
                   alignment: Alignment(boxX, boxY),
                   child: Container(
-                    height: 400,
-                    width: 420,
+                    height: bodyHeight * 0.67,
+                    width: mediaQueryWidth,
                     margin: EdgeInsets.only(bottom: 60),
                     child: Align(
                       alignment: Alignment.bottomCenter,
@@ -564,8 +447,8 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
                 ),
                 if (isLoading)
                   const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                      // child: CircularProgressIndicator(),
+                      ),
               ],
             ),
           ),
@@ -664,15 +547,16 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
               ),
             ),
             SizedBox(height: 20),
-            Visibility(
-              visible: widget.naratorSound != 'default.mp3',
-              child: Column(
-                children: [
-                  Text(
-                    "Ayo bermain sambil mendengarkan kisahnya!",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+            // Visibility(
+            //   visible: widget.naratorSound != '',
+            Column(
+              children: [
+                Text(
+                  "Ayo bermain sambil mendengarkan kisahnya!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                if (aktifkanTombolSound)
                   ToggleSwitch(
                     minWidth: 100.0,
                     initialLabelIndex: _isMuted ? 1 : 0,
@@ -693,8 +577,8 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
                       print('Switched to: $index, mute: $mute');
                     },
                   ),
-                ],
-              ),
+              ],
+              // ),
             )
           ],
         ),
@@ -723,7 +607,9 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
           TextButton(
             onPressed: () {
               _toggleSound(true, 1, 0);
-              Navigator.pushReplacement(
+              _checkInternetConnection();
+
+              Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => HomeScreen()),
               );
@@ -737,7 +623,6 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
 
   Future<void> _preparePuzzleImagesFromUrl(String imageUrl) async {
     try {
-      // Unduh gambar dari URL
       final http.Response response = await http.get(Uri.parse(imageUrl));
 
       if (response.statusCode != 200) {
@@ -753,7 +638,6 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
         return;
       }
 
-      // Pastikan gambar berbentuk persegi (1:1)
       final int minSide = originalImage.width < originalImage.height
           ? originalImage.width
           : originalImage.height;
@@ -774,23 +658,17 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
       }
 
       if (directory.existsSync()) {
-        // Menghapus semua file di dalam direktori
-        print("sux2.. ");
         final files = directory.listSync();
         for (var file in files) {
           if (file is File) {
             try {
-              // Your code that may throw an error
               imagePaths.clear();
               file.deleteSync();
-              print("sux1 hapus " + file.toString());
             } catch (e) {
-              // Handle the error
               print('sux1 An error occurred: $e');
             }
           }
         }
-        print("sux2 " + imagePaths.length.toString());
       }
 
       const int rows = 3;
@@ -807,10 +685,6 @@ class _EightTilePuzzleState extends State<EightTilePuzzle> {
             width: tileWidth,
             height: tileHeight,
           );
-
-          // final File file =
-          //     File('$targetDirectory/tile_${row * columns + col + 1}.jpg');
-          // await file.writeAsBytes(img.encodeJpg(tile));
 
           final String filePath =
               '$targetDirectory/tile_${row * columns + col + 1}.jpg';

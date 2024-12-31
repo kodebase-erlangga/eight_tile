@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:tes/view/eight_tile.dart';
 import 'package:tes/widgets/sound_controller.dart';
-// import '../widgets/sound_controller.dart';
+
+bool isLoading = true;
+bool isConnected = false;
+bool showNoConnectionMessage = false;
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -13,17 +16,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isMuted = false;
-  double _musicVolume = 0.5;
-  double _narratorVolume = 0.5;
-  double _gameVolume = 0.5;
-  double _openingVolume = 0.5;
-
-  double get musicVolume => _musicVolume;
-  double get narratorVolume => _narratorVolume;
-  double get gameVolume => _gameVolume;
-  double get openingVolume => _openingVolume;
-
   List<String> idProduct = [];
   List<String> kategoriProduct = [];
   List<String> bannerImages = [];
@@ -31,7 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<String> kategoriXProduct = [];
   List<String> productUrls = [];
   List<String> narationSound = [];
-  bool isLoading = true;
   String erlStatusId = '';
   List<Map<String, String>> categories = [];
   String? selectedCategoryId;
@@ -41,190 +32,46 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadBannerData('');
     _loadCategories();
-    _loadVolumePreferences();
+    _checkInternetConnection();
   }
 
-  void _setVolume(double value, String type) async {
-    final prefs = await SharedPreferences.getInstance();
+  Future<void> _checkInternetConnection() async {
     setState(() {
-      switch (type) {
-        case 'music':
-          _musicVolume = value;
-          musicPlayer.setVolume(_musicVolume);
-          prefs.setDouble('musicVolume', _musicVolume);
-          break;
-        case 'narrator':
-          _narratorVolume = value;
-          narratorPlayer.setVolume(value);
-          prefs.setDouble('narratorVolume', value);
-          break;
-        case 'game':
-          _gameVolume = value;
-          gamePlayer.setVolume(value);
-          prefs.setDouble('gameVolume', value);
-          break;
-        case 'opening':
-          _openingVolume = value;
-          openingPlayer.setVolume(value);
-          prefs.setDouble('openingVolume', value);
-          break;
-      }
+      isLoading = true;
     });
-  }
 
-  Future<void> _loadVolumePreferences() async {
-    final prefs = await SharedPreferences.getInstance();
+    final connectivityResult = await Connectivity().checkConnectivity();
     setState(() {
-      _musicVolume = prefs.getDouble('musicVolume') ?? 0.5;
-      _narratorVolume = prefs.getDouble('narratorVolume') ?? 0.5;
-      _gameVolume = prefs.getDouble('gameVolume') ?? 0.5;
-      _openingVolume = prefs.getDouble('openingVolume') ?? 0.5;
-    });
-  }
-
-  void toggleMute() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      if (_isMuted) {
-        _isMuted = false;
-        print('Unmuting volumes');
-        _musicVolume = prefs.getDouble('musicVolume') ?? 0.5;
-        _narratorVolume = prefs.getDouble('narratorVolume') ?? 0.5;
-        _gameVolume = prefs.getDouble('gameVolume') ?? 0.5;
-        _openingVolume = prefs.getDouble('openingVolume') ?? 0.5;
-
-        musicPlayer.setVolume(_musicVolume);
-        narratorPlayer.setVolume(_narratorVolume);
-        gamePlayer.setVolume(_gameVolume);
-        openingPlayer.setVolume(_openingVolume);
+      if (connectivityResult.toString() == "[ConnectivityResult.none]") {
+        isConnected = false;
       } else {
-        _isMuted = true;
-        print('Muting all volumes');
-        musicPlayer.setVolume(0);
-        narratorPlayer.setVolume(0);
-        gamePlayer.setVolume(0);
-        openingPlayer.setVolume(0);
+        isConnected = true;
       }
+
+      isLoading = false;
     });
+
+    if (isConnected) {
+      setState(() {
+        isConnected = true;
+      });
+      _reloadPage();
+    } else {
+      setState(() {
+        isConnected = false;
+        _reloadPage();
+      });
+    }
   }
 
-  void _showvolume() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          backgroundColor: Colors.white,
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Music Volume',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Slider(
-                  value: _musicVolume,
-                  min: 0,
-                  max: 1,
-                  activeColor: Colors.blue,
-                  inactiveColor: Colors.grey[300],
-                  onChanged:
-                      _isMuted ? null : (value) => _setVolume(value, 'music'),
-                ),
-                const Text(
-                  'Narrator Volume',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Slider(
-                  value: _narratorVolume,
-                  min: 0,
-                  max: 1,
-                  activeColor: Colors.blue,
-                  inactiveColor: Colors.grey[300],
-                  onChanged: _isMuted
-                      ? null
-                      : (value) => _setVolume(value, 'narrator'),
-                ),
-                const Text(
-                  'Game Volume',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Slider(
-                  value: _gameVolume,
-                  min: 0,
-                  max: 1,
-                  activeColor: Colors.blue,
-                  inactiveColor: Colors.grey[300],
-                  onChanged:
-                      _isMuted ? null : (value) => _setVolume(value, 'game'),
-                ),
-                const Text(
-                  'Opening Volume',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                Slider(
-                  value: _openingVolume,
-                  min: 0,
-                  max: 1,
-                  activeColor: Colors.blue,
-                  inactiveColor: Colors.grey[300],
-                  onChanged:
-                      _isMuted ? null : (value) => _setVolume(value, 'opening'),
-                ),
-                const SizedBox(height: 20),
-                Center(
-                  child: IconButton(
-                    icon: Icon(
-                      _isMuted ? Icons.volume_off : Icons.volume_up,
-                      size: 36,
-                      color: Colors.black,
-                    ),
-                    onPressed: toggleMute,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => HomeScreen()),
-                );
-              },
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+  void _reloadPage() {
+    setState(() {
+      // Logika memuat ulang data, contoh:
+      bannerImages = [];
+      _loadBannerData('');
+      _loadCategories();
+    });
+    print("Page reloaded!");
   }
 
   Future<void> _loadCategories() async {
@@ -300,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
           content: kategoriXProduct.isEmpty
               ? const Center(
                   child: Text(
-                    'Periksa',
+                    'Periksa Koneksi Internet',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey,
@@ -440,47 +287,57 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQueryHeight = MediaQuery.of(context).size.height;
+    final mediaQueryWidth = MediaQuery.of(context).size.width;
+
+    final myAppBar = AppBar(
+      centerTitle: true,
+      title: const Text(
+        'EIGHT TILE PUZZLE',
+        style: TextStyle(
+          color: Colors.white,
+          fontFamily: "ComicSans",
+          fontSize: 22,
+          shadows: [
+            Shadow(
+              offset: Offset(2, 2),
+              blurRadius: 2,
+              color: Colors.black45,
+            ),
+          ],
+        ),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.filter_list, color: Colors.white),
+        onPressed: _onFilterPressed,
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.volume_up, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SoundController()),
+            );
+          },
+        ),
+      ],
+      backgroundColor: Colors.purple,
+      elevation: 4,
+    );
+
+    final bodyHeight = mediaQueryHeight -
+        myAppBar.preferredSize.height -
+        MediaQuery.of(context).padding.top;
+
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         SystemNavigator.pop();
         return false;
       },
       child: Scaffold(
-        appBar: AppBar(
-          centerTitle: true,
-          title: const Text(
-            'EIGHT TILE PUZZLE',
-            style: TextStyle(
-              color: Colors.white,
-              fontFamily: "ComicSans", // Font lebih playful
-              fontSize: 22,
-              shadows: [
-                Shadow(
-                  offset: Offset(2, 2),
-                  blurRadius: 2,
-                  color: Colors.black45,
-                ),
-              ],
-            ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _onFilterPressed,
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.volume_up, color: Colors.white),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => SoundController()),
-                );
-              },
-            ),
-          ],
-          backgroundColor: Colors.purple,
-          elevation: 4,
-        ),
+        appBar: myAppBar,
         body: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -490,17 +347,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           child: isLoading
-              ? Center(child: CircularProgressIndicator())
-              : bannerImages.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : !isConnected
                   ? Center(
-                      child: Text(
-                        'Periksa Koneksi Internet',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'ComicSans',
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'No Internet Connection',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontFamily: 'ComicSans',
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              await _checkInternetConnection();
+                              if (isConnected) {
+                                await _loadBannerData('');
+                                await _loadCategories();
+                              }
+                            },
+                            child: Text('Retry'),
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(
@@ -541,7 +413,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                               child: Image.network(
                                                 productUrls[firstIndex],
                                                 fit: BoxFit.cover,
-                                                height: 200,
+                                                // height: 200,
+                                                height: bodyHeight * 0.3,
                                                 width: double.infinity,
                                                 errorBuilder: (context, error,
                                                     stackTrace) {
@@ -624,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 child: Image.network(
                                                   productUrls[secondIndex],
                                                   fit: BoxFit.cover,
-                                                  height: 200,
+                                                  height: bodyHeight * 0.3,
                                                   width: double.infinity,
                                                   errorBuilder: (context, error,
                                                       stackTrace) {

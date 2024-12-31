@@ -38,7 +38,6 @@ class SoundControllerState extends State<SoundController> {
           _musicVolume = value;
           musicPlayer.setVolume(_musicVolume);
           prefs.setDouble('musicVolume', _musicVolume);
-          print('ihsan 1 ' + _musicVolume.toString());
           break;
         case 'narrator':
           _narratorVolume = value;
@@ -49,13 +48,11 @@ class SoundControllerState extends State<SoundController> {
           _gameVolume = value;
           gamePlayer.setVolume(value);
           prefs.setDouble('gameVolume', value);
-          // print('ihsan 123 ' + _gameVolume.toString());
           break;
         case 'opening':
           _openingVolume = value;
           openingPlayer.setVolume(value);
           prefs.setDouble('openingVolume', value);
-          // print('ihsan 15 ' + _openingVolume.toString());
           break;
       }
     });
@@ -118,7 +115,10 @@ class SoundControllerState extends State<SoundController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sound Controller'),
+        title: Text(
+          'Audio Controller',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.purple,
         elevation: 0,
       ),
